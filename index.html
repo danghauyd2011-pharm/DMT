@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>💊 Dược BVĐN — Quản lý Danh mục Thuốc</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- MODE FAB -->
+<button id="mode-fab" onclick="toggleMode()">🖥️ Chế độ PC</button>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-logo">💊 Dược <em>BVĐN</em></div>
+  <div class="tb-divider"></div>
+  <div class="tb-sub">Quản lý Danh mục Thuốc 2021–2026</div>
+  <div class="tb-sp"></div>
+  <div class="tb-pill" id="today-badge">📅 --/--/----</div>
+  <div class="tb-pill" id="total-badge">⏳ Đang tải</div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('catalog')" id="tab-catalog">📋 Danh mục</button>
+  <button class="tab-btn" onclick="switchTab('tracking')" id="tab-tracking">📊 Phân bổ</button>
+  <button class="tab-btn" onclick="switchTab('upload')" id="tab-upload">📤 Nạp dữ liệu</button>
+</div>
+
+<div class="main">
+
+<!-- ═══ TAB DANH MỤC ═══ -->
+<div class="tab-panel active" id="panel-catalog">
+
+  <div class="stats-row">
+    <div class="sc sc-total"><div class="sc-ico">📋</div><div><div class="sc-val" id="s-total">—</div><div class="sc-lbl">Tổng</div></div></div>
+    <div class="sc sc-active"><div class="sc-ico">✅</div><div><div class="sc-val" id="s-active">—</div><div class="sc-lbl">Còn HH</div></div></div>
+    <div class="sc sc-exp"><div class="sc-ico">⏰</div><div><div class="sc-val" id="s-exp">—</div><div class="sc-lbl">Hết HH</div></div></div>
+    <div class="sc sc-syt"><div class="sc-ico">🏛️</div><div><div class="sc-val" id="s-syt">—</div><div class="sc-lbl">SYT</div></div></div>
+    <div class="sc sc-bvdn"><div class="sc-ico">🏥</div><div><div class="sc-val" id="s-bvdn">—</div><div class="sc-lbl">BVĐN</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="srch-row">
+      <div class="sbox"><span class="si">🔍</span><input type="text" id="s-qdtt" placeholder="Tìm QĐTT…" oninput="applyFilters()"></div>
+      <div class="sbox"><span class="si">💊</span><input type="text" id="s-thuoc" placeholder="Tìm tên thuốc…" oninput="applyFilters()"></div>
+      <div class="sbox"><span class="si">🧪</span><input type="text" id="s-hoat" placeholder="Tìm hoạt chất…" oninput="applyFilters()"></div>
+    </div>
+    <button class="btn btn-ghost" onclick="toggleColPanel()">⚙️ Ẩn/Hiện cột</button>
+    <button class="btn btn-exp" id="btn-exp" onclick="toggleExpired()">👁 Hiện hết HH</button>
+    <button class="btn btn-ghost btn-sm" onclick="clearFilters()">✕ Xoá lọc</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportVisibleExcel()">📥 Xuất Excel</button>
+  </div>
+
+  <div class="chips-row">
+    <span class="chip-lbl">Ban hành:</span>
+    <div class="chip chip-all on" id="chip-all" onclick="setSrc('all')">📋 Tất cả</div>
+    <div class="chip chip-syt" id="chip-syt" onclick="setSrc('SYT')">🏛️ Sở Y Tế</div>
+    <div class="chip chip-bvdn" id="chip-bvdn" onclick="setSrc('BVĐN')">🏥 BV Đà Nẵng</div>
+  </div>
+
+  <div class="col-panel" id="col-panel">
+    <h4>⚙️ Click để ẩn/hiện cột</h4>
+    <div class="col-list" id="col-list"></div>
+  </div>
+
+  <div class="tbl-outer">
+    <div class="loading-screen" id="loading-screen">
+      <div class="spin"></div>
+      <div id="loading-text">Đang khởi tạo…</div>
+    </div>
+    <div class="tbl-wrap" id="tbl-wrap" style="display:none">
+      <table id="main-tbl">
+        <thead><tr id="tbl-head"></tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="pag" id="pag" style="display:none"></div>
+</div>
+
+<!-- ═══ TAB PHÂN BỔ ═══ -->
+<div class="tab-panel" id="panel-tracking">
+
+  <!-- GitHub Sync Panel -->
+  <div class="gh-panel">
+    <h3>🔗 Đồng bộ dữ liệu phân bổ lên GitHub</h3>
+    <p style="font-size:11px;color:#8fa3c0;margin-bottom:10px">Lưu số liệu nhập kho lên GitHub để chia sẻ với đồng nghiệp và tự động phục hồi lần sau.</p>
+    <div class="gh-url-box">
+      <div class="fg" style="flex:1;min-width:220px">
+        <label style="color:#8fa3c0">GitHub Token (Personal Access Token)</label>
+        <input class="gh-input" type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+      </div>
+      <div class="fg" style="flex:1;min-width:220px">
+        <label style="color:#8fa3c0">Repo (owner/repo-name)</label>
+        <input class="gh-input" type="text" id="gh-repo" placeholder="danghauyd2011/danh-muc-thuoc">
+      </div>
+      <div class="fg">
+        <label style="color:#8fa3c0">&nbsp;</label>
+        <button class="btn btn-p" onclick="saveGHConfig()">💾 Lưu cấu hình</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn btn-g" onclick="pushTrackToGithub()">⬆️ Đẩy lên GitHub</button>
+      <button class="btn btn-ghost" style="color:#c9d1d9;border-color:#30363d" onclick="pullTrackFromGithub()">⬇️ Kéo từ GitHub</button>
+    </div>
+    <div class="gh-status gh-info" id="gh-status" style="margin-top:8px;display:none"></div>
+  </div>
+
+  <!-- Upload nhập kho -->
+  <div class="up-panel">
+    <h3>📥 Nạp file nhập kho / file đã lưu</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px">
+        <div class="uzone" onclick="document.getElementById('fi-track').click()">
+          <div class="ui">📑</div><p>File nhập hàng tháng</p>
+          <small>QĐTT | Tên thuốc | SL nhập | Tháng</small>
+          <input type="file" id="fi-track" accept=".xlsx,.xls" onchange="loadTrackFile(event)">
+        </div>
+      </div>
+      <div style="flex:1;min-width:160px">
+        <div class="uzone" onclick="document.getElementById('fi-saved').click()">
+          <div class="ui">💾</div><p>File đã lưu (lần trước)</p>
+          <small>Excel xuất từ app — tự merge</small>
+          <input type="file" id="fi-saved" accept=".xlsx,.xls" onchange="loadSavedTrack(event)">
+        </div>
+      </div>
+    </div>
+    <div class="ulog show" id="track-log"><p>ℹ Chưa có dữ liệu. Nhập tay hoặc nạp file bên dưới.</p></div>
+  </div>
+
+  <!-- Nhập tay -->
+  <div class="up-panel">
+    <h3>✏️ Nhập tay số lượng vào kho</h3>
+    <div class="form-row">
+      <div class="fg" style="flex:2;min-width:200px;position:relative">
+        <label>Tìm thuốc (QĐTT / tên)</label>
+        <input type="text" id="ti-search" placeholder="Gõ để tìm kiếm…" oninput="showTrackSearch()" autocomplete="off">
+        <div class="ti-dd" id="ti-dropdown"></div>
+      </div>
+      <div class="fg"><label>Tháng nhập</label><input type="month" id="ti-month"></div>
+      <div class="fg"><label>SL nhập</label><input type="number" id="ti-qty" min="0" placeholder="0" style="width:85px"></div>
+      <div class="fg"><label>&nbsp;</label><button class="btn btn-g" onclick="addEntry()">＋ Thêm</button></div>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="exportTrackExcel()">📥 Xuất Excel lưu</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearTrack()">🗑 Xoá hết</button>
+    </div>
+  </div>
+
+  <div class="track-wrap">
+    <table id="track-tbl">
+      <thead><tr>
+        <th class="nosort">STT</th><th class="nosort">QĐTT</th><th class="nosort">Tên thuốc</th>
+        <th class="nosort">Hoạt chất</th><th class="nosort">ĐVT</th>
+        <th class="nosort">SL phân bổ</th><th class="nosort">Tổng nhập</th>
+        <th class="nosort">Còn lại</th><th class="nosort">% Nhập</th>
+        <th class="nosort">Chi tiết tháng</th><th class="nosort">Xoá</th>
+      </tr></thead>
+      <tbody id="track-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ TAB NẠP DỮ LIỆU ═══ -->
+<div class="tab-panel" id="panel-upload">
+  <div class="up-panel">
+    <h3>📤 Nạp thêm file Excel danh mục</h3>
+    <p style="font-size:12px;color:var(--tx2);margin-bottom:10px">Hỗ trợ cả 2 định dạng: file gốc 26 cột và file bổ sung 22 cột. Trùng QĐTT+STT sẽ cập nhật.</p>
+    <div class="uzone" onclick="document.getElementById('fi-main').click()">
+      <div class="ui">📂</div>
+      <p>Kéo thả hoặc click chọn file Excel danh mục</p>
+      <small>Hỗ trợ .xlsx, .xls — cả 2 format cột</small>
+      <input type="file" id="fi-main" accept=".xlsx,.xls" onchange="loadMainFile(event)">
+    </div>
+    <div class="ulog show" id="main-log">
+      <p>✅ Dữ liệu gốc đã nạp sẵn: <strong id="loaded-count">3.768</strong> mục thuốc</p>
+    </div>
+  </div>
+
+  <div class="up-panel">
+    <h3>💾 Lưu & Khôi phục</h3>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="saveLS()">💾 Lưu vào trình duyệt</button>
+      <button class="btn btn-ghost" onclick="loadLS()">🔄 Khôi phục từ trình duyệt</button>
+      <button class="btn btn-ghost" onclick="exportJSON()">📤 Xuất JSON backup</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('fi-json').click()">📥 Nạp JSON backup</button>
+      <input type="file" id="fi-json" accept=".json" onchange="importJSON(event)" style="display:none">
+    </div>
+    <p style="font-size:11px;color:var(--tx3);margin-top:8px">⚠️ localStorage mất khi xoá cache — xuất JSON để giữ lâu dài.</p>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- MODAL -->
+<div class="overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="mhdr"><h3 id="modal-title">Chi tiết thuốc</h3><button class="mclose" onclick="closeModal()">✕</button></div>
+    <div class="mbody" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
