@@ -749,7 +749,7 @@ function loadMainFile(event){
       const fname='u'+Date.now();
 
       wb.SheetNames.forEach(sn=>{
-        const rawData=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false});
+        const rawData=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true});
         let headerIdx=-1,startIdx=-1;
         for(let i=0;i<Math.min(rawData.length,12);i++){
           const joined=rawData[i].map(v=>String(v||'').toLowerCase()).join('|');
@@ -885,23 +885,20 @@ function fmtDateFromRaw(v){
   try{const d=new Date(v);if(!isNaN(d)) return d.toISOString().slice(0,10);}catch(e){}
   return '';
 }
-function fmtMoney(v){const n=parseFloat(String(v).replace(/[^0-9.]/g,''));return isNaN(n)?v||'':n.toLocaleString('vi-VN');}
+function fmtMoney(v){const n=parseNum(v);return(n===0)?v||'':n.toLocaleString('vi-VN');}
 function parseNum(v){
-  // Xử lý đúng số VN: '173.300' -> 173300, '173,300' -> 173300, '173300' -> 173300
-  if(v===null||v===undefined||v==='') return 0;
+  // Xử lý mọi định dạng số: '173,300' '173.300' '173300' '1,200,000'
+  if(v===null||v===undefined||v===''||v===false) return 0;
   const s=String(v).trim();
   if(!s||s==='-'||s==='—') return 0;
-  // Nếu có cả dấu . và dấu , -> dấu . là phân cách ngàn, dấu , là thập phân
-  if(s.includes(',')&&s.includes('.')) return parseFloat(s.replace(/\./g,'').replace(',','.'));
-  // Nếu chỉ có dấu . mà phần sau dấu . có 3 chữ số -> dấu phân cách ngàn
-  if(s.includes('.')&&/\.\d{3}$/.test(s.replace(/\./g,'')==='')) return parseFloat(s.replace(/\./g,''));
-  const m=s.match(/[\d.]+/);
-  if(!m) return 0;
-  const raw=m[0];
-  // Nếu dấu . ở vị trí phân cách ngàn (3 chữ số sau dấu chấm cuối)
-  const parts=raw.split('.');
-  if(parts.length>1&&parts[parts.length-1].length===3) return parseFloat(parts.join(''));
-  return parseFloat(raw)||0;
+  // Bỏ tất cả dấu phẩy (phân cách ngàn kiểu US/Excel)
+  let c=s.replace(/,/g,'');
+  // Nếu còn dấu chấm mà phần sau có đúng 3 chữ số -> cũng là phân cách ngàn (kiểu VN)
+  const parts=c.split('.');
+  if(parts.length>1 && parts[parts.length-1].length===3 && parts.every(p=>/^\d+$/.test(p)))
+    c=parts.join('');
+  const n=parseFloat(c);
+  return isNaN(n)?0:n;
 }
 function fmtNum(v){const n=parseNum(v);return(n===0)?'—':n.toLocaleString('vi-VN');}
 function highlight(text,q){if(!q||!text) return text;return text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>');}
