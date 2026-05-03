@@ -476,7 +476,7 @@ function renderTracking(){
     const pc=pct>=100?'danger':pct>=80?'warn':'';
     const isNBV=(drug.NoiBanHanh||'').toUpperCase().includes('BV');
     const detail=td.entries.map(e=>
-      `<span style="display:inline-block;margin:2px 3px;padding:1px 6px;background:var(--surf2);border-radius:4px;font-size:11px;border:1px solid var(--bdr)"><b>${e.month}:</b>${e.qty.toLocaleString('vi')}</span>`
+      `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px 3px;padding:2px 4px 2px 7px;background:var(--surf2);border-radius:20px;font-size:11px;border:1px solid var(--bdr)"><b>${e.month}:</b><span style="font-family:var(--mono)">${e.qty.toLocaleString('vi')}</span><button onclick="delTrackMonth('${drug.id}','${e.month}')" title="Xoá tháng ${e.month}" style="background:none;border:none;cursor:pointer;color:#c62828;font-size:14px;line-height:1;padding:0 2px;margin-left:1px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5" style2="opacity:.5">×</button></span>`
     ).join('')||'—';
     return `<tr>
       <td class="tdm">${i+1}</td>
@@ -498,8 +498,20 @@ function renderTracking(){
 }
 
 function delTrack(id){
-  if(!confirm('Xoá dữ liệu theo dõi thuốc này?')) return;
+  if(!confirm('Xoá toàn bộ dữ liệu nhập kho của thuốc này?')) return;
   delete trackData[id]; saveTrackLS(); renderTracking();
+}
+
+function delTrackMonth(id, month){
+  if(!trackData[id]) return;
+  const drug = trackData[id].drug;
+  const entry = trackData[id].entries.find(e=>e.month===month);
+  if(!entry) return;
+  if(!confirm(`Xoá ${entry.qty.toLocaleString('vi')} ${drug.DonViTinh} nhập tháng ${month}\ncủa thuốc: ${drug.TenThuoc}?`)) return;
+  trackData[id].entries = trackData[id].entries.filter(e=>e.month!==month);
+  // Nếu không còn tháng nào thì giữ nguyên dòng thuốc (không xoá hẳn)
+  logTrack(`🗑 Đã xoá tháng ${month} của ${drug.TenThuoc}`);
+  saveTrackLS(); renderTracking();
 }
 function clearTrack(){
   if(!confirm('Xoá TOÀN BỘ dữ liệu nhập kho?')) return;
