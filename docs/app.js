@@ -441,23 +441,37 @@ document.addEventListener('click',e=>{
     document.getElementById('ti-dropdown')?.classList.remove('show');
 });
 
+function trackKey(drug){
+  // Key ổn định: QDTT|STT - không dùng id vì id có thể thay đổi khi merge data
+  return (drug.QDTT||'')+'|'+(drug.STT||'');
+}
+
+function findFreshDrug(drug){
+  // Tìm drug trong allData theo QDTT+STT (chính xác nhất)
+  return allData.find(r=>r.QDTT===drug.QDTT && r.STT===drug.STT) || drug;
+}
+
 function addEntry(){
   if(!selectedTrackRow){alert('Vui lòng chọn thuốc từ danh sách gợi ý!');return;}
   const month=document.getElementById('ti-month').value;
   const qty=parseInt(document.getElementById('ti-qty').value)||0;
   if(!month||qty<=0){alert('Vui lòng nhập tháng và số lượng hợp lệ!');return;}
-  const id=selectedTrackRow.id;
-  // Lấy drug mới nhất từ allData để đảm bảo SLPhanBo đúng
-  const freshDrug=allData.find(r=>r.id===selectedTrackRow.id)||(selectedTrackRow);
-  if(!trackData[id]) trackData[id]={drug:freshDrug,entries:[]};
-  else trackData[id].drug=freshDrug; // luôn cập nhật drug mới nhất
-  const ex=trackData[id].entries.find(e=>e.month===month);
-  if(ex) ex.qty+=qty; else trackData[id].entries.push({month,qty});
-  trackData[id].entries.sort((a,b)=>a.month.localeCompare(b.month));
+
+  // Luôn lấy drug tươi từ allData theo QDTT+STT
+  const drug=findFreshDrug(selectedTrackRow);
+  const key=trackKey(drug);
+
+  if(!trackData[key]) trackData[key]={drug,entries:[]};
+  else trackData[key].drug=drug; // cập nhật drug mới nhất
+
+  const ex=trackData[key].entries.find(e=>e.month===month);
+  if(ex) ex.qty+=qty; else trackData[key].entries.push({month,qty});
+  trackData[key].entries.sort((a,b)=>a.month.localeCompare(b.month));
+
   document.getElementById('ti-qty').value='';
   document.getElementById('ti-search').value='';
   selectedTrackRow=null;
-  logTrack(`✅ +${qty.toLocaleString('vi')} ${trackData[id].drug.DonViTinh} — ${trackData[id].drug.TenThuoc} (${month})`);
+  logTrack(`✅ +${qty.toLocaleString('vi')} ${drug.DonViTinh} — ${drug.TenThuoc} (${month})`);
   saveTrackLS();
   renderTracking();
 }
@@ -470,11 +484,9 @@ function renderTracking(){
     return;
   }
   body.innerHTML=rows.map((td,i)=>{
-    // Luôn lấy drug mới nhất từ allData để có SLPhanBo chính xác
-    const liveDrug=allData.find(r=>r.id===td.drug.id||(r.QDTT===td.drug.QDTT&&r.STT===td.drug.STT));
-    const drug=liveDrug||td.drug;
-    // Cập nhật drug trong trackData nếu tìm được bản mới hơn
-    if(liveDrug) td.drug=liveDrug;
+    // Luôn lookup drug tươi từ allData theo QDTT+STT để SLPhanBo chính xác
+    const drug=findFreshDrug(td.drug);
+    td.drug=drug; // cập nhật cache
     const alloc=parseNum(drug.SLPhanBo)||0;
     const tot=td.entries.reduce((s,e)=>s+e.qty,0);
     const rem=alloc-tot;
@@ -483,7 +495,7 @@ function renderTracking(){
     const pc=pct>=100?'danger':pct>=80?'warn':'';
     const isNBV=(drug.NoiBanHanh||'').toUpperCase().includes('BV');
     const detail=td.entries.map(e=>
-      `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px 3px;padding:2px 4px 2px 7px;background:var(--surf2);border-radius:20px;font-size:11px;border:1px solid var(--bdr)"><b>${e.month}:</b><span style="font-family:var(--mono)">${e.qty.toLocaleString('vi')}</span><button onclick="delTrackMonth('${drug.id}','${e.month}')" title="Xoá tháng ${e.month}" style="background:none;border:none;cursor:pointer;color:#c62828;font-size:14px;line-height:1;padding:0 2px;margin-left:1px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5" style2="opacity:.5">×</button></span>`
+      `<span style="display:inline-flex;align-items:center;gap:3px;margin:2px 3px;padding:2px 4px 2px 7px;background:var(--surf2);border-radius:20px;font-size:11px;border:1px solid var(--bdr)"><b>${e.month}:</b><span style="font-family:var(--mono)">${e.qty.toLocaleString('vi')}</span><button onclick="delTrackMonth('${trackKey(drug)}','${e.month}')" title="Xoá tháng ${e.month}" style="background:none;border:none;cursor:pointer;color:#c62828;font-size:14px;line-height:1;padding:0 2px;margin-left:1px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=.5" style2="opacity:.5">×</button></span>`
     ).join('')||'—';
     return `<tr>
       <td class="tdm">${i+1}</td>
@@ -499,24 +511,23 @@ function renderTracking(){
         <span style="font-size:11px;font-family:var(--mono)">${pct}%</span>
       </td>
       <td style="white-space:normal;min-width:160px">${detail}</td>
-      <td class="tdc"><button class="btn btn-ghost btn-sm" onclick="delTrack('${drug.id}')">🗑</button></td>
+      <td class="tdc"><button class="btn btn-ghost btn-sm" onclick="delTrack('${trackKey(drug)}')">🗑</button></td>
     </tr>`;
   }).join('');
 }
 
-function delTrack(id){
+function delTrack(key){
   if(!confirm('Xoá toàn bộ dữ liệu nhập kho của thuốc này?')) return;
-  delete trackData[id]; saveTrackLS(); renderTracking();
+  delete trackData[key]; saveTrackLS(); renderTracking();
 }
 
-function delTrackMonth(id, month){
-  if(!trackData[id]) return;
-  const drug = trackData[id].drug;
-  const entry = trackData[id].entries.find(e=>e.month===month);
+function delTrackMonth(key, month){
+  if(!trackData[key]) return;
+  const drug = trackData[key].drug;
+  const entry = trackData[key].entries.find(e=>e.month===month);
   if(!entry) return;
   if(!confirm(`Xoá ${entry.qty.toLocaleString('vi')} ${drug.DonViTinh} nhập tháng ${month}\ncủa thuốc: ${drug.TenThuoc}?`)) return;
-  trackData[id].entries = trackData[id].entries.filter(e=>e.month!==month);
-  // Nếu không còn tháng nào thì giữ nguyên dòng thuốc (không xoá hẳn)
+  trackData[key].entries = trackData[key].entries.filter(e=>e.month!==month);
   logTrack(`🗑 Đã xoá tháng ${month} của ${drug.TenThuoc}`);
   saveTrackLS(); renderTracking();
 }
@@ -605,15 +616,15 @@ async function pullTrackFromGithub(){
     const pulled=JSON.parse(decoded);
     // Merge
     let merged=0;
-    Object.entries(pulled).forEach(([id,td])=>{
-      if(!trackData[id]){trackData[id]=td;merged++;}
+    const pulledMigrated=migrateTrackData(pulled);
+    Object.entries(pulledMigrated).forEach(([key,td])=>{
+      if(!trackData[key]){trackData[key]=td;merged++;}
       else{
-        // Merge entries theo tháng
         td.entries.forEach(e=>{
-          const ex=trackData[id].entries.find(x=>x.month===e.month);
-          if(ex) ex.qty=Math.max(ex.qty,e.qty); else trackData[id].entries.push(e);
+          const ex=trackData[key].entries.find(x=>x.month===e.month);
+          if(ex) ex.qty=Math.max(ex.qty,e.qty); else trackData[key].entries.push(e);
         });
-        trackData[id].entries.sort((a,b)=>a.month.localeCompare(b.month));
+        trackData[key].entries.sort((a,b)=>a.month.localeCompare(b.month));
       }
     });
     saveTrackLS(); renderTracking();
@@ -641,10 +652,11 @@ function loadTrackFile(event){
         if(!qty||!month) return;
         const drug=allData.find(r=>r.QDTT===qdtt||(r.TenThuoc||'').toLowerCase()===ten);
         if(!drug) return;
-        if(!trackData[drug.id]) trackData[drug.id]={drug,entries:[]};
-        const ex=trackData[drug.id].entries.find(e=>e.month===month);
-        if(ex) ex.qty+=qty; else trackData[drug.id].entries.push({month,qty});
-        trackData[drug.id].entries.sort((a,b)=>a.month.localeCompare(b.month));
+        const k=trackKey(drug);
+        if(!trackData[k]) trackData[k]={drug,entries:[]};
+        const ex=trackData[k].entries.find(e=>e.month===month);
+        if(ex) ex.qty+=qty; else trackData[k].entries.push({month,qty});
+        trackData[k].entries.sort((a,b)=>a.month.localeCompare(b.month));
         added++;
       });
       logTrack(`📑 Nạp nhập kho: ${added} bản ghi từ ${file.name}`);
@@ -666,13 +678,14 @@ function loadSavedTrack(event){
       rows.slice(1).forEach(row=>{
         const qdtt=String(row[0]||'').trim();
         const drug=allData.find(r=>r.QDTT===qdtt); if(!drug) return;
-        if(!trackData[drug.id]) trackData[drug.id]={drug,entries:[]};
+        const k=trackKey(drug);
+        if(!trackData[k]) trackData[k]={drug,entries:[]};
         months.forEach((m,i)=>{
           if(!m) return; const qty=parseInt(row[5+i])||0; if(!qty) return;
-          const ex=trackData[drug.id].entries.find(e=>e.month===String(m));
-          if(ex) ex.qty=qty; else trackData[drug.id].entries.push({month:String(m),qty});
+          const ex=trackData[k].entries.find(e=>e.month===String(m));
+          if(ex) ex.qty=qty; else trackData[k].entries.push({month:String(m),qty});
         });
-        trackData[drug.id].entries.sort((a,b)=>a.month.localeCompare(b.month));
+        trackData[k].entries.sort((a,b)=>a.month.localeCompare(b.month));
         loaded++;
       });
       logTrack(`💾 Nạp file lưu: ${loaded} thuốc từ ${file.name}`);
@@ -794,10 +807,31 @@ function exportVisibleExcel(){
 // ══════════════════════════════════════════════
 //  LOCAL STORAGE
 // ══════════════════════════════════════════════
+function migrateTrackData(raw){
+  // Migrate trackData từ key=id cũ sang key=QDTT|STT mới
+  const migrated={};
+  Object.values(raw).forEach(td=>{
+    if(!td.drug) return;
+    const key=trackKey(td.drug);
+    if(!migrated[key]){
+      migrated[key]=td;
+    } else {
+      // Merge entries nếu trùng key
+      td.entries.forEach(e=>{
+        const ex=migrated[key].entries.find(x=>x.month===e.month);
+        if(ex) ex.qty=Math.max(ex.qty,e.qty);
+        else migrated[key].entries.push(e);
+      });
+      migrated[key].entries.sort((a,b)=>a.month.localeCompare(b.month));
+    }
+  });
+  return migrated;
+}
+
 function tryLoadLS(){
   try{
     const t=localStorage.getItem('bvdn_track');
-    if(t) trackData=JSON.parse(t);
+    if(t){ const raw=JSON.parse(t); trackData=migrateTrackData(raw); }
     const s=localStorage.getItem('bvdn_extra');
     if(s){
       const extra=JSON.parse(s);
