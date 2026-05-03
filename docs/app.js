@@ -447,7 +447,10 @@ function addEntry(){
   const qty=parseInt(document.getElementById('ti-qty').value)||0;
   if(!month||qty<=0){alert('Vui lòng nhập tháng và số lượng hợp lệ!');return;}
   const id=selectedTrackRow.id;
-  if(!trackData[id]) trackData[id]={drug:selectedTrackRow,entries:[]};
+  // Lấy drug mới nhất từ allData để đảm bảo SLPhanBo đúng
+  const freshDrug=allData.find(r=>r.id===selectedTrackRow.id)||(selectedTrackRow);
+  if(!trackData[id]) trackData[id]={drug:freshDrug,entries:[]};
+  else trackData[id].drug=freshDrug; // luôn cập nhật drug mới nhất
   const ex=trackData[id].entries.find(e=>e.month===month);
   if(ex) ex.qty+=qty; else trackData[id].entries.push({month,qty});
   trackData[id].entries.sort((a,b)=>a.month.localeCompare(b.month));
@@ -467,8 +470,12 @@ function renderTracking(){
     return;
   }
   body.innerHTML=rows.map((td,i)=>{
-    const drug=td.drug;
-    const alloc=parseFloat(drug.SLPhanBo)||0;
+    // Luôn lấy drug mới nhất từ allData để có SLPhanBo chính xác
+    const liveDrug=allData.find(r=>r.id===td.drug.id||(r.QDTT===td.drug.QDTT&&r.STT===td.drug.STT));
+    const drug=liveDrug||td.drug;
+    // Cập nhật drug trong trackData nếu tìm được bản mới hơn
+    if(liveDrug) td.drug=liveDrug;
+    const alloc=parseNum(drug.SLPhanBo)||0;
     const tot=td.entries.reduce((s,e)=>s+e.qty,0);
     const rem=alloc-tot;
     const pct=alloc>0?Math.min(100,Math.round(tot/alloc*100)):0;
@@ -879,5 +886,22 @@ function fmtDateFromRaw(v){
   return '';
 }
 function fmtMoney(v){const n=parseFloat(String(v).replace(/[^0-9.]/g,''));return isNaN(n)?v||'':n.toLocaleString('vi-VN');}
-function fmtNum(v){const n=parseFloat(String(v).replace(/[^0-9.]/g,''));return(isNaN(n)||n===0)?'—':n.toLocaleString('vi-VN');}
+function parseNum(v){
+  // Xử lý đúng số VN: '173.300' -> 173300, '173,300' -> 173300, '173300' -> 173300
+  if(v===null||v===undefined||v==='') return 0;
+  const s=String(v).trim();
+  if(!s||s==='-'||s==='—') return 0;
+  // Nếu có cả dấu . và dấu , -> dấu . là phân cách ngàn, dấu , là thập phân
+  if(s.includes(',')&&s.includes('.')) return parseFloat(s.replace(/\./g,'').replace(',','.'));
+  // Nếu chỉ có dấu . mà phần sau dấu . có 3 chữ số -> dấu phân cách ngàn
+  if(s.includes('.')&&/\.\d{3}$/.test(s.replace(/\./g,'')==='')) return parseFloat(s.replace(/\./g,''));
+  const m=s.match(/[\d.]+/);
+  if(!m) return 0;
+  const raw=m[0];
+  // Nếu dấu . ở vị trí phân cách ngàn (3 chữ số sau dấu chấm cuối)
+  const parts=raw.split('.');
+  if(parts.length>1&&parts[parts.length-1].length===3) return parseFloat(parts.join(''));
+  return parseFloat(raw)||0;
+}
+function fmtNum(v){const n=parseNum(v);return(n===0)?'—':n.toLocaleString('vi-VN');}
 function highlight(text,q){if(!q||!text) return text;return text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'),'<mark>$1</mark>');}
