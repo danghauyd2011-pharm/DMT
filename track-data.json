@@ -1,31 +1,31 @@
 {
-  "Tong danh muc 2021-2025_24": {
+  "2271/QĐ-BVĐN|19": {
     "drug": {
-      "id": "Tong danh muc 2021-2025_24",
+      "id": "Tong_danh_muc_2021-2025_24",
       "STT": "19",
       "TT20": "7",
       "GoiNhom": "N5",
       "TenThuoc": "Thuốc tiêm Fentanyl citrate",
       "TenHoatChat": "Fentanyl",
-      "NongDo": "0,1mg/2ml",
+      "NongDo": " 0,1mg/2ml",
       "DuongDung": "Tiêm",
-      "DangBaoChe": "Dung dịch tiêm bắp, tiêm tĩnh mạch, truyền tĩnh mạch, tiêm ngoài màng cứng",
+      "DangBaoChe": "Dung dịch tiêm bắp, tiêm tĩnh mạch, truyền tĩnh mạch, tiêm ngoài màng cứng ",
       "QuyCach": "Hộp 10 ống x 2ml",
       "HanDung": "48 tháng",
-      "SDK": "VN-18481-14",
+      "SDK": "VN-18481-14 ",
       "HangSanXuat": "Yichang Humanwell Pharmaceutical Co., Ltd",
       "NuocSanXuat": "China",
       "DonViTinh": "Ống",
-      "DonGia": "15000",
-      "SLPhanBo": "42000",
-      "SLPhanBoBHYT": "42000",
-      "SLTuyChon": "12600",
+      "DonGia": "15,000",
+      "SLPhanBo": "42,000",
+      "SLPhanBoBHYT": "42,000",
+      "SLTuyChon": "12,600",
       "DieuTiet": "",
       "LuuY": "",
       "NhaThau": "CÔNG TY CỔ PHẦN DƯỢC PHẨM TRUNG ƯƠNG CODUPHA",
       "QDTT": "2271/QĐ-BVĐN",
-      "NgayBatDau": "2025-08-20",
-      "NgayHetHieu": "2026-08-20",
+      "NgayBatDau": "2025-08-19",
+      "NgayHetHieu": "2026-08-19",
       "NoiBanHanh": "BVĐN"
     },
     "entries": [
@@ -36,42 +36,6 @@
       {
         "month": "2026-04",
         "qty": 34000
-      }
-    ]
-  },
-  "Tong_danh_muc_2021-2025_25": {
-    "drug": {
-      "id": "Tong_danh_muc_2021-2025_25",
-      "STT": "20",
-      "TT20": "7",
-      "GoiNhom": "N1",
-      "TenThuoc": "Fentanyl B.Braun 0.1mg/2ml",
-      "TenHoatChat": "Fentanyl (dưới dạng Fentanyl citrat)",
-      "NongDo": "0,1mg/2ml",
-      "DuongDung": "Tiêm",
-      "DangBaoChe": "Dung dịch tiêm",
-      "QuyCach": "Hộp 10 ống thuỷ tinh 2ml",
-      "HanDung": "36 tháng",
-      "SDK": "VN-22494-20",
-      "HangSanXuat": "B.Braun Melsungen AG",
-      "NuocSanXuat": "Đức",
-      "DonViTinh": "Ống",
-      "DonGia": "17,010",
-      "SLPhanBo": "173,300",
-      "SLPhanBoBHYT": "173,300",
-      "SLTuyChon": "51,990",
-      "DieuTiet": "",
-      "LuuY": "",
-      "NhaThau": "CÔNG TY CỔ PHẦN DƯỢC PHẨM TRUNG ƯƠNG CPC1",
-      "QDTT": "317/QĐ-SYT",
-      "NgayBatDau": "2025-07-14",
-      "NgayHetHieu": "2027-08-25",
-      "NoiBanHanh": "SYT"
-    },
-    "entries": [
-      {
-        "month": "2026-04",
-        "qty": 8000
       }
     ]
   }
