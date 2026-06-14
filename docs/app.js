@@ -45,7 +45,7 @@ const COLS = [
   { key:'GoiNhom',     label:'Gói nhóm',     w:75,  show:false },
   { key:'DieuTiet',    label:'Điều tiết',    w:75,  show:false, cls:'tdm' },
   { key:'LuuY',        label:'Lưu ý',        w:180, show:false },
-  { key:'MaPhanLoai',  label:'KS đặc biệt',  w:160, show:false },
+  { key:'MaPhanLoai',  label:'KS đặc biệt',  w:160, show:true  },
   { key:'_detail',     label:'Chi tiết',     w:65,  show:true,  nosort:true },
 ];
 
