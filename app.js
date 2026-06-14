@@ -45,6 +45,7 @@ const COLS = [
   { key:'GoiNhom',     label:'Gói nhóm',     w:75,  show:false },
   { key:'DieuTiet',    label:'Điều tiết',    w:75,  show:false, cls:'tdm' },
   { key:'LuuY',        label:'Lưu ý',        w:180, show:false },
+  { key:'MaPhanLoai',  label:'KS đặc biệt',  w:160, show:false },
   { key:'_detail',     label:'Chi tiết',     w:65,  show:true,  nosort:true },
 ];
 
@@ -398,6 +399,7 @@ function showDetail(id){
     ['Nhà thầu',row.NhaThau],['Ngày bắt đầu HH',fmtDate(row.NgayBatDau)],
     ['Ngày hết HH',fmtDate(row.NgayHetHieu)],['Lưu ý kê đơn',row.LuuY],
     ['Gói nhóm',row.GoiNhom],
+    ['KS đặc biệt',row.MaPhanLoai],
   ];
   document.getElementById('modal-body').innerHTML=`<div class="detail-grid">${
     fields.filter(([,v])=>v).map(([l,v])=>`<div class="detail-item"><label>${l}</label><p>${v}</p></div>`).join('')
@@ -742,14 +744,15 @@ function parseRowExcel(row,fmt,idx,fname){
       QuyCach:c(8),HanDung:c(9),SDK:c(10),HangSanXuat:c(11),NuocSanXuat:c(12),
       DonViTinh:c(13),DonGia:c(14),SLPhanBo:c(15),SLPhanBoBHYT:'',SLTuyChon:c(16),
       DieuTiet:'',LuuY:c(18),NhaThau:row.length>21?c(21):'',
-      QDTT:qdtt,NgayBatDau:'',NgayHetHieu:'',NoiBanHanh:guessNBH(qdtt)};
+      QDTT:qdtt,NgayBatDau:fmtDateFromRaw(row[23]),NgayHetHieu:fmtDateFromRaw(row[24]),
+      NoiBanHanh:c(25)||guessNBH(qdtt),MaPhanLoai:c(22)};
   }
   return{id:`${fname}_${idx}`,STT:String(stt),TT20:c(1),GoiNhom:c(2),
     TenThuoc:c(4),TenHoatChat:c(5),NongDo:c(6),DuongDung:c(7),DangBaoChe:c(8),
     QuyCach:c(9),HanDung:c(10),SDK:c(11),HangSanXuat:c(12),NuocSanXuat:c(13),
     DonViTinh:c(14),DonGia:c(15),SLPhanBo:c(16),SLPhanBoBHYT:c(17),SLTuyChon:c(18),
     DieuTiet:c(19),LuuY:c(20),NhaThau:c(21),QDTT:c(22),
-    NgayBatDau:fmtDateFromRaw(row[23]),NgayHetHieu:fmtDateFromRaw(row[24]),NoiBanHanh:c(25)};
+    NgayBatDau:fmtDateFromRaw(row[23]),NgayHetHieu:fmtDateFromRaw(row[24]),NoiBanHanh:c(25),MaPhanLoai:c(26)};
 }
 
 function loadMainFile(event){
