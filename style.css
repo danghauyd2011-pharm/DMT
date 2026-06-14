@@ -124,6 +124,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--tx);min-height:100
 .chip-all{border-color:var(--p);color:var(--p);background:var(--surf2)}.chip-all.on{background:var(--p);color:#fff}
 .chip-syt{border-color:var(--syt-tx);color:var(--syt-tx);background:var(--syt-bg)}.chip-syt.on{background:var(--syt-tx);color:#fff}
 .chip-bvdn{border-color:var(--bvdn-tx);color:var(--bvdn-tx);background:var(--bvdn-bg)}.chip-bvdn.on{background:var(--bvdn-tx);color:#fff}
+.chip-ksdb{border-color:#607d8b;color:#607d8b;background:#eceff1}.chip-ksdb.on{background:#607d8b;color:#fff}
+.chip-ksdb-1{border-color:#b71c1c;color:#b71c1c;background:#ffebee}.chip-ksdb-1.on{background:#b71c1c;color:#fff}
+.chip-ksdb-2{border-color:#6a1b9a;color:#6a1b9a;background:#f3e5f5}.chip-ksdb-2.on{background:#6a1b9a;color:#fff}
+.chip-ksdb-4{border-color:#e65100;color:#e65100;background:#fff3e0}.chip-ksdb-4.on{background:#e65100;color:#fff}
+.chip-ksdb-5{border-color:#827717;color:#827717;background:#f9fbe7}.chip-ksdb-5.on{background:#827717;color:#fff}
+.chip-ksdb-0{border-color:#2e7d32;color:#2e7d32;background:#e8f5e9}.chip-ksdb-0.on{background:#2e7d32;color:#fff}
 
 /* ══════ COL PANEL ══════ */
 .col-panel{background:var(--surf);border:1.5px solid var(--bdr);border-radius:var(--r12);padding:10px 12px;margin-bottom:8px;display:none}
