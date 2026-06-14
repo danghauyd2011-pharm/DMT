@@ -12,6 +12,7 @@ let page = 1, perPage = 100;
 let trackData = {};
 let selectedTrackRow = null;
 let isPCMode = false;
+let ksdbFilter = 'all';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -210,6 +211,14 @@ function applyFilters() {
     if (q1 && !(r.QDTT||'').toLowerCase().includes(q1)) return false;
     if (q2 && !(r.TenThuoc||'').toLowerCase().includes(q2)) return false;
     if (q3 && !(r.TenHoatChat||'').toLowerCase().includes(q3)) return false;
+    if (ksdbFilter !== 'all') {
+      const mp = r.MaPhanLoai || '';
+      if (ksdbFilter === '0' && !mp.startsWith('0')) return false;
+      if (ksdbFilter === '1' && !(mp.startsWith('1'))) return false;
+      if (ksdbFilter === '2' && !mp.startsWith('2')) return false;
+      if (ksdbFilter === '4' && !mp.startsWith('4')) return false;
+      if (ksdbFilter === '5' && !mp.startsWith('5')) return false;
+    }
     return true;
   });
 
@@ -228,7 +237,7 @@ function clearFilters() {
   document.getElementById('s-qdtt').value='';
   document.getElementById('s-thuoc').value='';
   document.getElementById('s-hoat').value='';
-  srcFilter='all'; updateChips(); applyFilters();
+  srcFilter='all'; ksdbFilter='all'; updateChips(); updateKSDBChips(); applyFilters();
 }
 
 function setSrc(v){srcFilter=v;updateChips();applyFilters();}
@@ -236,6 +245,13 @@ function updateChips(){
   document.getElementById('chip-all').classList.toggle('on',srcFilter==='all');
   document.getElementById('chip-syt').classList.toggle('on',srcFilter==='SYT');
   document.getElementById('chip-bvdn').classList.toggle('on',srcFilter==='BVĐN');
+}
+function setKSDB(v){ksdbFilter=v;updateKSDBChips();applyFilters();}
+function updateKSDBChips(){
+  ['all','0','1','2','4','5'].forEach(v=>{
+    const el=document.getElementById('ksdb-'+v);
+    if(el) el.classList.toggle('on',ksdbFilter===v);
+  });
 }
 
 function toggleExpired(){
