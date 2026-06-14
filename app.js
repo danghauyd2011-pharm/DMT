@@ -220,9 +220,9 @@ function applyFilters() {
     if (q1 && !(r.QDTT||'').toLowerCase().includes(q1)) return false;
     if (q2 && !(r.TenThuoc||'').toLowerCase().includes(q2)) return false;
     if (q3 && !(r.TenHoatChat||'').toLowerCase().includes(q3)) return false;
-    // KSDB multi-select
+    // KSDB multi-select — so sánh chính xác vì '1 - Thuốc gây nghiện' và '1 - Dạng phối hợp' đều bắt đầu bằng '1'
     if (!ksdbFilter.has('all')) {
-      const mp = (r.MaPhanLoai||'').charAt(0);
+      const mp = r.MaPhanLoai || '';
       if (!ksdbFilter.has(mp)) return false;
     }
     return true;
@@ -422,12 +422,16 @@ function renderTable(){
             nb.includes('BV')? `<span class="badge bb">🏥 BVĐN</span>`:
             `<span style="font-size:10px">${val}</span>`;
       } else if(col.key==='MaPhanLoai'){
-        const mp=val||'';const p=mp.charAt(0);
-        const cls=p==='0'?'ksdb-0':p==='1'?'ksdb-1':p==='2'?'ksdb-2':p==='3'?'ksdb-3':p==='4'?'ksdb-4':p==='5'?'ksdb-5':'';
-        const icon=p==='0'?'✅':p==='1'?'🚨':p==='2'?'🧠':p==='3'?'⚗️':p==='4'?'☠️':p==='5'?'🚫':'';
-        // Show short label
-        const short=p==='0'?'Không KS':p==='1'?'Gây nghiện':p==='2'?'Hướng thần':p==='3'?'Tiền chất':p==='4'?'Thuốc độc':p==='5'?'DM cấm':mp;
-        val=mp?`<span class="ksdb-badge ${cls}">${icon} ${short}</span>`:'-';
+        const mp=val||'';
+        let cls='',icon='',short=mp;
+        if(mp==='0 - Không kiểm soát đặc biệt')               {cls='ksdb-0';icon='✅';short='Không KS';}
+        else if(mp==='1 - Thuốc gây nghiện')                   {cls='ksdb-1';icon='🚨';short='Gây nghiện';}
+        else if(mp==='1 - Dạng phối hợp chứa dược chất gây nghiện'){cls='ksdb-1b';icon='🚨';short='PH gây nghiện';}
+        else if(mp==='2 - Thuốc hướng thần')                   {cls='ksdb-2';icon='🧠';short='Hướng thần';}
+        else if(mp.startsWith('3'))                             {cls='ksdb-3';icon='⚗️';short='Tiền chất';}
+        else if(mp==='4 - Thuốc độc')                          {cls='ksdb-4';icon='☠️';short='Thuốc độc';}
+        else if(mp==='5 - Danh mục cấm sử dụng trong một số ngành'){cls='ksdb-5';icon='🚫';short='DM cấm';}
+        val=mp?`<span class="ksdb-badge ${cls}" title="${mp}">${icon} ${short}</span>`:'-';
       } else if(col.fmt==='money') val=fmtMoney(val);
       else if(col.fmt==='num')   val=fmtNum(val);
       else if(col.fmt==='date')  val=fmtDate(val);

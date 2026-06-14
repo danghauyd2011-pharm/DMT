@@ -324,6 +324,7 @@ td.tdtt{font-family:var(--mono);font-size:10px;color:var(--tx2)}
 }
 .ksdb-0{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7}
 .ksdb-1{background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a}
+.ksdb-1b{background:#fce4e4;color:#c62828;border:1px solid #ef9a9a;border-style:dashed}
 .ksdb-2{background:#f3e5f5;color:#6a1b9a;border:1px solid #ce93d8}
 .ksdb-3{background:#e3f2fd;color:#1565c0;border:1px solid #90caf9}
 .ksdb-4{background:#fff3e0;color:#e65100;border:1px solid #ffcc80}
