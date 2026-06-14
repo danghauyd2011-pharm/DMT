@@ -12,6 +12,8 @@ let page = 1, perPage = 100;
 let trackData = {};
 let selectedTrackRow = null;
 let isPCMode = false;
+let ksdbFilter = new Set(['all']); // 'all' or set of prefixes '0','1','2','3','4','5'
+let filterDrawerOpen = false;
 let ksdbFilter = 'all';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -199,25 +201,30 @@ function statusBadge(st, end) {
 // ══════════════════════════════════════════════
 function applyFilters() {
   if (!dataLoaded && !allData.length) return;
-  const q1=(document.getElementById('s-qdtt').value||'').toLowerCase().trim();
-  const q2=(document.getElementById('s-thuoc').value||'').toLowerCase().trim();
-  const q3=(document.getElementById('s-hoat').value||'').toLowerCase().trim();
+  const qMain=(document.getElementById('s-main')?.value||'').toLowerCase().trim();
+  const q1=(document.getElementById('s-qdtt')?.value||'').toLowerCase().trim();
+  const q2=(document.getElementById('s-thuoc')?.value||'').toLowerCase().trim();
+  const q3=(document.getElementById('s-hoat')?.value||'').toLowerCase().trim();
 
   filtered = allData.filter(r => {
     const st = getStatus(r);
     if (!showExpired && st==='expired') return false;
     if (srcFilter==='SYT'  && !(r.NoiBanHanh||'').toUpperCase().includes('SYT')) return false;
     if (srcFilter==='BVĐN' && !(r.NoiBanHanh||'').toUpperCase().includes('BV'))  return false;
+    // Main search: across QDTT, drug name, active ingredient
+    if (qMain) {
+      const inQD  = (r.QDTT||'').toLowerCase().includes(qMain);
+      const inTen = (r.TenThuoc||'').toLowerCase().includes(qMain);
+      const inHC  = (r.TenHoatChat||'').toLowerCase().includes(qMain);
+      if (!inQD && !inTen && !inHC) return false;
+    }
     if (q1 && !(r.QDTT||'').toLowerCase().includes(q1)) return false;
     if (q2 && !(r.TenThuoc||'').toLowerCase().includes(q2)) return false;
     if (q3 && !(r.TenHoatChat||'').toLowerCase().includes(q3)) return false;
-    if (ksdbFilter !== 'all') {
-      const mp = r.MaPhanLoai || '';
-      if (ksdbFilter === '0' && !mp.startsWith('0')) return false;
-      if (ksdbFilter === '1' && !(mp.startsWith('1'))) return false;
-      if (ksdbFilter === '2' && !mp.startsWith('2')) return false;
-      if (ksdbFilter === '4' && !mp.startsWith('4')) return false;
-      if (ksdbFilter === '5' && !mp.startsWith('5')) return false;
+    // KSDB multi-select
+    if (!ksdbFilter.has('all')) {
+      const mp = (r.MaPhanLoai||'').charAt(0);
+      if (!ksdbFilter.has(mp)) return false;
     }
     return true;
   });
@@ -230,36 +237,106 @@ function applyFilters() {
       return va.localeCompare(vb,'vi')*sortDir;
     });
   }
-  page=1; updateStats(); renderTable();
+  page=1; updateStats(); updateFilterBadge(); renderTable();
 }
 
 function clearFilters() {
   document.getElementById('s-qdtt').value='';
   document.getElementById('s-thuoc').value='';
   document.getElementById('s-hoat').value='';
-  srcFilter='all'; ksdbFilter='all'; updateChips(); updateKSDBChips(); applyFilters();
+  srcFilter='all';
+  ksdbFilter=new Set(['all']);
+  document.getElementById('s-main').value='';
+  document.getElementById('search-clear-btn').style.display='none';
+  document.querySelectorAll('.ksdb-cb').forEach(cb=>cb.checked=true);
+  document.getElementById('ksdb-cb-all').checked=true;
+  updateChips(); syncChips(); updateFilterBadge(); applyFilters();
 }
 
-function setSrc(v){srcFilter=v;updateChips();applyFilters();}
+function setSrc(v){srcFilter=v;updateChips();syncChips();applyFilters();}
 function updateChips(){
-  document.getElementById('chip-all').classList.toggle('on',srcFilter==='all');
-  document.getElementById('chip-syt').classList.toggle('on',srcFilter==='SYT');
-  document.getElementById('chip-bvdn').classList.toggle('on',srcFilter==='BVĐN');
-}
-function setKSDB(v){ksdbFilter=v;updateKSDBChips();applyFilters();}
-function updateKSDBChips(){
-  ['all','0','1','2','4','5'].forEach(v=>{
-    const el=document.getElementById('ksdb-'+v);
-    if(el) el.classList.toggle('on',ksdbFilter===v);
+  ['chip-all','chip-syt','chip-bvdn'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove('on');
   });
+  if(srcFilter==='all') document.getElementById('chip-all')?.classList.add('on');
+  if(srcFilter==='SYT') document.getElementById('chip-syt')?.classList.add('on');
+  if(srcFilter==='BVĐN') document.getElementById('chip-bvdn')?.classList.add('on');
+}
+function syncChips(){
+  // Sync drawer chips with quick chips
+  ['chip-all','chip-syt','chip-bvdn'].forEach(id=>{
+    const el=document.getElementById(id);
+    const el2=document.getElementById(id+'2');
+    if(el&&el2){el2.className=el.className;}
+  });
+}
+// KSDB multi-select
+function toggleKSDBAll(cb){
+  document.querySelectorAll('.ksdb-cb').forEach(c=>c.checked=cb.checked);
+  ksdbFilter=cb.checked?new Set(['all']):new Set();
+  updateFilterBadge(); applyFilters();
+}
+function updateKSDB(){
+  const cbs=[...document.querySelectorAll('.ksdb-cb')];
+  const checked=cbs.filter(c=>c.checked).map(c=>c.value);
+  const allCb=document.getElementById('ksdb-cb-all');
+  if(checked.length===cbs.length){
+    ksdbFilter=new Set(['all']); if(allCb) allCb.checked=true;
+  } else if(checked.length===0){
+    ksdbFilter=new Set(); if(allCb) allCb.checked=false;
+  } else {
+    ksdbFilter=new Set(checked); if(allCb) allCb.checked=false;
+  }
+  updateFilterBadge(); applyFilters();
+}
+function updateFilterBadge(){
+  const badge=document.getElementById('filter-badge');
+  const btn=document.getElementById('btn-filter');
+  const hasFilter=srcFilter!=='all'||!ksdbFilter.has('all')||showExpired||
+    (document.getElementById('s-qdtt')?.value||'').trim()||
+    (document.getElementById('s-thuoc')?.value||'').trim()||
+    (document.getElementById('s-hoat')?.value||'').trim();
+  if(badge) badge.style.display=hasFilter?'flex':'none';
+  if(btn) btn.classList.toggle('active',hasFilter);
+}
+// Main search
+function onMainSearch(val){
+  const clearBtn=document.getElementById('search-clear-btn');
+  if(clearBtn) clearBtn.style.display=val?'':'none';
+  applyFilters();
+}
+function clearMainSearch(){
+  const inp=document.getElementById('s-main');
+  if(inp) inp.value='';
+  const clearBtn=document.getElementById('search-clear-btn');
+  if(clearBtn) clearBtn.style.display='none';
+  applyFilters();
+}
+// Filter drawer
+function toggleFilterDrawer(){
+  filterDrawerOpen?closeFilterDrawer():openFilterDrawer();
+}
+function openFilterDrawer(){
+  filterDrawerOpen=true;
+  document.getElementById('filter-overlay').classList.add('show');
+  document.getElementById('filter-drawer').classList.add('open');
+  document.getElementById('btn-filter').classList.add('active');
+}
+function closeFilterDrawer(){
+  filterDrawerOpen=false;
+  document.getElementById('filter-overlay').classList.remove('show');
+  document.getElementById('filter-drawer').classList.remove('open');
+  document.getElementById('btn-filter').classList.remove('active');
+  updateFilterBadge();
 }
 
 function toggleExpired(){
   showExpired=!showExpired;
   const b=document.getElementById('btn-exp');
-  b.classList.toggle('on',showExpired);
-  b.textContent=showExpired?'🙈 Ẩn hết HH':'👁 Hiện hết HH';
-  applyFilters();
+  if(b){b.classList.toggle('on',showExpired);b.textContent=showExpired?'🙈 Ẩn hết HH':'👁 Hiện hết HH';}
+  const c=document.getElementById('chip-exp');
+  if(c){c.classList.toggle('on',showExpired);c.textContent=showExpired?'🙈 Ẩn hết HH':'👁 Hiện hết HH';}
+  updateFilterBadge(); applyFilters();
 }
 
 // ══════════════════════════════════════════════
@@ -345,6 +422,13 @@ function renderTable(){
         val=nb.includes('SYT')?`<span class="badge bs">🏛️ SYT</span>`:
             nb.includes('BV')? `<span class="badge bb">🏥 BVĐN</span>`:
             `<span style="font-size:10px">${val}</span>`;
+      } else if(col.key==='MaPhanLoai'){
+        const mp=val||'';const p=mp.charAt(0);
+        const cls=p==='0'?'ksdb-0':p==='1'?'ksdb-1':p==='2'?'ksdb-2':p==='3'?'ksdb-3':p==='4'?'ksdb-4':p==='5'?'ksdb-5':'';
+        const icon=p==='0'?'✅':p==='1'?'🚨':p==='2'?'🧠':p==='3'?'⚗️':p==='4'?'☠️':p==='5'?'🚫':'';
+        // Show short label
+        const short=p==='0'?'Không KS':p==='1'?'Gây nghiện':p==='2'?'Hướng thần':p==='3'?'Tiền chất':p==='4'?'Thuốc độc':p==='5'?'DM cấm':mp;
+        val=mp?`<span class="ksdb-badge ${cls}">${icon} ${short}</span>`:'-';
       } else if(col.fmt==='money') val=fmtMoney(val);
       else if(col.fmt==='num')   val=fmtNum(val);
       else if(col.fmt==='date')  val=fmtDate(val);
