@@ -14,7 +14,6 @@ let selectedTrackRow = null;
 let isPCMode = false;
 let ksdbFilter = new Set(['all']); // 'all' or set of prefixes '0','1','2','3','4','5'
 let filterDrawerOpen = false;
-let ksdbFilter = 'all';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
