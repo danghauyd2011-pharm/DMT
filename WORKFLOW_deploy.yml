@@ -3,6 +3,10 @@ name: Build va Deploy Danh Muc Thuoc
 on:
   push:
     branches: [main]
+    paths:          # ← THÊM DÒNG NÀY
+      - '**.xlsx'   # Chạy khi upload .xlsx
+      - '**.xls'    # Chạy khi upload .xls
+      - 'build.py'  # Chạy khi sửa build.py
   workflow_dispatch:
 
 permissions:
