@@ -63,6 +63,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadGHConfig();
   await loadDataChunks();
   tryLoadLS();
+  recomputeSTT();
   applyFilters();
   // Kiểm tra update mỗi 5 phút
   setInterval(checkForUpdates, 5*60*1000);
@@ -546,14 +547,40 @@ document.addEventListener('click',e=>{
     document.getElementById('ti-dropdown')?.classList.remove('show');
 });
 
+function matchKey(drug){
+  // Khoá định danh ổn định, KHÔNG dùng STT (STT giờ chỉ là số thứ tự hiển thị,
+  // được tự đánh số lại theo TT20 mỗi lần nạp/gộp dữ liệu nên có thể thay đổi).
+  return (drug.QDTT||'')+'|'+(drug.TenThuoc||'').slice(0,25)+'|'+(drug.NongDo||'')+'|'+(drug.QuyCach||'')+'|'+(drug.SDK||'')+'|'+(drug.SLPhanBo||'');
+}
+
+function tt20SortKey(v){
+  const s=String(v||'').trim();
+  if(!s) return [2,0,''];
+  const m=s.match(/^(\d+)/);
+  if(m) return [0,parseInt(m[1]),s];
+  return [1,0,s];
+}
+
+function cmpTT20(a,b){
+  const ka=tt20SortKey(a),kb=tt20SortKey(b);
+  if(ka[0]!==kb[0]) return ka[0]-kb[0];
+  if(ka[0]===0) return ka[1]-kb[1];
+  return ka[2].localeCompare(kb[2],'vi');
+}
+
+function recomputeSTT(){
+  // Sắp xếp theo TT20 tăng dần rồi tự đánh số lại cột STT từ 1 → hết.
+  allData.sort((a,b)=>cmpTT20(a.TT20,b.TT20));
+  allData.forEach((r,i)=>{r.STT=String(i+1);});
+}
+
 function trackKey(drug){
-  // Key ổn định: QDTT|STT - không dùng id vì id có thể thay đổi khi merge data
-  return (drug.QDTT||'')+'|'+(drug.STT||'');
+  return matchKey(drug);
 }
 
 function findFreshDrug(drug){
-  // Tìm drug trong allData theo QDTT+STT (chính xác nhất)
-  return allData.find(r=>r.QDTT===drug.QDTT && r.STT===drug.STT) || drug;
+  // Tìm drug trong allData theo khoá ổn định (không dùng STT vì STT có thể đổi)
+  return allData.find(r=>matchKey(r)===matchKey(drug)) || drug;
 }
 
 function addEntry(){
@@ -829,8 +856,6 @@ function detectFmt(headerRow){
 
 function parseRowExcel(row,fmt,idx,fname){
   const c=i=>String(row[i]||'').trim().replace(/\n/g,' ');
-  const si=v=>{try{const f=parseFloat(v);return(f!==f)?null:parseInt(f);}catch{return null;}};
-  const stt=si(row[0]); if(stt===null) return null;
 
   const guessNBH=q=>{
     if(!q) return '';
@@ -841,17 +866,19 @@ function parseRowExcel(row,fmt,idx,fname){
   };
 
   if(fmt==='new'){
+    const tenThuoc=c(3); if(!tenThuoc) return null;
     const qdtt=c(17);
-    return{id:`${fname}_${idx}`,STT:String(stt),TT20:c(1),GoiNhom:c(2),
-      TenThuoc:c(3),TenHoatChat:c(4),NongDo:c(5),DuongDung:c(6),DangBaoChe:c(7),
+    return{id:`${fname}_${idx}`,STT:'',TT20:c(1),GoiNhom:c(2),
+      TenThuoc:tenThuoc,TenHoatChat:c(4),NongDo:c(5),DuongDung:c(6),DangBaoChe:c(7),
       QuyCach:c(8),HanDung:c(9),SDK:c(10),HangSanXuat:c(11),NuocSanXuat:c(12),
       DonViTinh:c(13),DonGia:c(14),SLPhanBo:c(15),SLPhanBoBHYT:'',SLTuyChon:c(16),
       DieuTiet:'',LuuY:c(18),NhaThau:row.length>21?c(21):'',
       QDTT:qdtt,NgayBatDau:fmtDateFromRaw(row[23]),NgayHetHieu:fmtDateFromRaw(row[24]),
       NoiBanHanh:c(25)||guessNBH(qdtt),MaPhanLoai:c(22)};
   }
-  return{id:`${fname}_${idx}`,STT:String(stt),TT20:c(1),GoiNhom:c(2),
-    TenThuoc:c(4),TenHoatChat:c(5),NongDo:c(6),DuongDung:c(7),DangBaoChe:c(8),
+  const tenThuoc=c(4); if(!tenThuoc) return null;
+  return{id:`${fname}_${idx}`,STT:'',TT20:c(1),GoiNhom:c(2),
+    TenThuoc:tenThuoc,TenHoatChat:c(5),NongDo:c(6),DuongDung:c(7),DangBaoChe:c(8),
     QuyCach:c(9),HanDung:c(10),SDK:c(11),HangSanXuat:c(12),NuocSanXuat:c(13),
     DonViTinh:c(14),DonGia:c(15),SLPhanBo:c(16),SLPhanBoBHYT:c(17),SLTuyChon:c(18),
     DieuTiet:c(19),LuuY:c(20),NhaThau:c(21),QDTT:c(22),
@@ -884,12 +911,13 @@ function loadMainFile(event){
           while(row.length<26) row.push(null);
           const parsed=parseRowExcel(row,fmt,startIdx+idx,fname);
           if(!parsed||!parsed.TenThuoc) return;
-          const ex=allData.find(r=>r.QDTT===parsed.QDTT&&r.STT===parsed.STT);
+          const ex=allData.find(r=>matchKey(r)===matchKey(parsed));
           if(ex){Object.assign(ex,parsed);ex.id=ex.id;updated++;}
           else{allData.push(parsed);added++;}
         });
       });
 
+      recomputeSTT();
       logMain(`📂 <strong>${file.name}</strong> — ✅ Thêm: ${added} | 🔄 Cập nhật: ${updated}`);
       document.getElementById('loaded-count').textContent=allData.length.toLocaleString('vi');
       switchTab('catalog'); applyFilters();
@@ -942,10 +970,10 @@ function tryLoadLS(){
     if(s){
       const extra=JSON.parse(s);
       extra.forEach(nr=>{
-        const ex=allData.find(r=>r.QDTT===nr.QDTT&&r.STT===nr.STT);
+        const ex=allData.find(r=>matchKey(r)===matchKey(nr));
         if(ex) Object.assign(ex,{...nr,id:ex.id}); else allData.push(nr);
       });
-      if(extra.length) logMain(`🔄 Khôi phục ${extra.length} mục bổ sung từ trình duyệt`);
+      if(extra.length){ recomputeSTT(); logMain(`🔄 Khôi phục ${extra.length} mục bổ sung từ trình duyệt`); }
     }
   }catch(e){}
 }
@@ -960,7 +988,7 @@ function saveLS(){
 }
 
 function loadLS(){
-  tryLoadLS(); applyFilters(); renderTracking();
+  tryLoadLS(); recomputeSTT(); applyFilters(); renderTracking();
   alert('✅ Đã khôi phục từ trình duyệt!');
 }
 
@@ -983,11 +1011,12 @@ function importJSON(event){
       let added=0,updated=0;
       if(Array.isArray(p)){
         // backup dạng cũ - toàn bộ allData
-        p.forEach(nr=>{const ex=allData.find(r=>r.QDTT===nr.QDTT&&r.STT===nr.STT);if(ex){Object.assign(ex,{...nr,id:ex.id});updated++;}else{allData.push(nr);added++;}});
+        p.forEach(nr=>{const ex=allData.find(r=>matchKey(r)===matchKey(nr));if(ex){Object.assign(ex,{...nr,id:ex.id});updated++;}else{allData.push(nr);added++;}});
       } else {
-        if(p.data) p.data.forEach(nr=>{const ex=allData.find(r=>r.QDTT===nr.QDTT&&r.STT===nr.STT);if(ex){Object.assign(ex,{...nr,id:ex.id});updated++;}else{allData.push(nr);added++;}});
+        if(p.data) p.data.forEach(nr=>{const ex=allData.find(r=>matchKey(r)===matchKey(nr));if(ex){Object.assign(ex,{...nr,id:ex.id});updated++;}else{allData.push(nr);added++;}});
         if(p.track) Object.assign(trackData,p.track);
       }
+      recomputeSTT();
       saveTrackLS();
       document.getElementById('loaded-count').textContent=allData.length.toLocaleString('vi');
       switchTab('catalog'); applyFilters(); renderTracking();
