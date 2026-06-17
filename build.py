@@ -44,15 +44,29 @@ def safe_int(v):
         return None if f!=f else int(f)
     except: return None
 
+def tt20_sort_key(v):
+    """Sắp xếp theo TT20 tăng dần: số hợp lệ trước (theo giá trị số),
+    chuỗi không phải số sau, trống/blank xếp cuối cùng."""
+    s=str(v or '').strip()
+    if not s: return (2,0,'')
+    m=''
+    for ch in s:
+        if ch.isdigit(): m+=ch
+        else: break
+    if m: return (0,int(m),s)
+    return (1,0,s)
+
 def parse_row(row,fmt,idx,fname):
-    stt=safe_int(row[0])
-    if stt is None: return None
+    # Cột STT (cột A) không còn bắt buộc — không dùng để loại dòng nữa.
+    # STT hiển thị sẽ được tự đánh số lại (1..hết) sau khi sắp xếp theo TT20.
     def g(i): return clean(row[i]) if i<len(row) else ''
     def d(i): return parse_date(row[i]) if i<len(row) else ''
     if fmt=='new':
         qdtt=g(17)
-        return{'id':f"{fname}_{idx}",'STT':str(stt),'TT20':g(1),'GoiNhom':g(2),
-            'TenThuoc':g(3),'TenHoatChat':g(4),'NongDo':g(5),'DuongDung':g(6),'DangBaoChe':g(7),
+        ten_thuoc=g(3)
+        if not ten_thuoc: return None
+        return{'id':f"{fname}_{idx}",'STT':'','TT20':g(1),'GoiNhom':g(2),
+            'TenThuoc':ten_thuoc,'TenHoatChat':g(4),'NongDo':g(5),'DuongDung':g(6),'DangBaoChe':g(7),
             'QuyCach':g(8),'HanDung':g(9),'SDK':g(10),'HangSanXuat':g(11),'NuocSanXuat':g(12),
             'DonViTinh':g(13),'DonGia':g(14),'SLPhanBo':g(15),'SLPhanBoBHYT':'','SLTuyChon':g(16),
             'DieuTiet':'','LuuY':g(18),'NhaThau':g(21) if len(row)>21 else '',
@@ -61,8 +75,10 @@ def parse_row(row,fmt,idx,fname):
             'NoiBanHanh':g(25) if len(row)>25 and g(25) else guess_nbh(qdtt),
             'MaPhanLoai':g(22) if len(row)>22 else ''}
     else:
-        return{'id':f"{fname}_{idx}",'STT':str(stt),'TT20':g(1),'GoiNhom':g(2),
-            'TenThuoc':g(4),'TenHoatChat':g(5),'NongDo':g(6),'DuongDung':g(7),'DangBaoChe':g(8),
+        ten_thuoc=g(4)
+        if not ten_thuoc: return None
+        return{'id':f"{fname}_{idx}",'STT':'','TT20':g(1),'GoiNhom':g(2),
+            'TenThuoc':ten_thuoc,'TenHoatChat':g(5),'NongDo':g(6),'DuongDung':g(7),'DangBaoChe':g(8),
             'QuyCach':g(9),'HanDung':g(10),'SDK':g(11),'HangSanXuat':g(12),'NuocSanXuat':g(13),
             'DonViTinh':g(14),'DonGia':g(15),'SLPhanBo':g(16),'SLPhanBoBHYT':g(17),'SLTuyChon':g(18),
             'DieuTiet':g(19),'LuuY':g(20),'NhaThau':g(21),'QDTT':g(22),
@@ -143,9 +159,29 @@ def main():
         try: all_rows.extend(parse_excel(f))
         except Exception as e: print(f" ⚠️ Lỗi {f}: {e}")
     if not all_rows: print("❌ Không đọc được dữ liệu!"); sys.exit(1)
+    # Khoá định danh dòng: không dùng STT (cột này không còn bắt buộc / không ổn định).
+    # Chỉ coi 2 dòng là "trùng" khi chúng đến từ 2 FILE KHÁC NHAU (tức là file mới
+    # đang cập nhật lại đúng dòng đó của file cũ) — khi đó GHI ĐÈ bằng dòng mới nhất.
+    # Nếu 2 dòng giống nhau nhưng nằm NGAY TRONG CÙNG 1 FILE thì đó là 2 dòng thực sự
+    # khác nhau (ví dụ cùng thuốc nhưng được liệt kê 2 dòng riêng trong cùng quyết định)
+    # → giữ lại CẢ HAI, không gộp.
     seen={}
-    for r in all_rows: seen[f"{r['QDTT']}|{r['STT']}|{r['TenThuoc'][:8]}"]=r
-    data=list(seen.values())
+    data=[]
+    for r in all_rows:
+        key=f"{r['QDTT']}|{r['TenThuoc'][:25]}|{r['NongDo']}|{r['QuyCach']}|{r['SDK']}|{r['SLPhanBo']}"
+        fname=r['id'].rsplit('_',1)[0]
+        if key in seen:
+            prev_fname,prev_pos=seen[key]
+            if prev_fname==fname:
+                data.append(r); seen[key]=(fname,len(data)-1)
+            else:
+                data[prev_pos]=r; seen[key]=(fname,prev_pos)
+        else:
+            data.append(r); seen[key]=(fname,len(data)-1)
+    # Sắp xếp theo TT20 tăng dần, rồi tự đánh số lại cột STT từ 1 → hết
+    # (cột STT trong file Excel không còn quan trọng / không bắt buộc phải có)
+    data.sort(key=lambda r: tt20_sort_key(r['TT20']))
+    for i,r in enumerate(data,start=1): r['STT']=str(i)
     print(f"\n  Tổng sau loại trùng: {len(data)} mục")
     write_chunks(data)
     copy_static()
